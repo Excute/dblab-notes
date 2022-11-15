@@ -1,0 +1,16 @@
+#define nd
+
+#pragma omp parallel {
+#pragma omp for reduction(+:track) {
+    for (int i = 0; i < n; i++) { // for every data instance
+      int min = 0;
+      T_real dist_sq, minDist_sq = FLT_MAX;
+      for (int k = 0; k < kc; k++){ // for every cluster
+        dist_sq = 0.0f;
+        for (int j = 0; j < nd; j++){ //for every dimension
+          dist_sq
+        }
+      }
+    }
+  }
+}
