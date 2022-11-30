@@ -1,59 +1,17 @@
-package test
-
-func TestFieldFromUnmarshaled(t *testing.T) {
-	Resp := &CmResponses{}
-	Reso := &CmResources{}
-	initData(Resp, Reso)
-
-	var v interface{}
-
-	// if err := json.Unmarshal([]byte(Reso.Map["Pod"].Manifest), &v); err != nil {
-	if err := json.Unmarshal([]byte(`
-    {
-      "containers": [
-        {
-          "volumes":[
-            {"path":"A"},
-            {"path":"B"},
-            {"path":"C"}
-          ],
-          "image":"nginx"
-        },{
-          "volumes":[
-            {"path":"D"},
-            {"path":"E"},
-            {"path":"F"}
-          ],
-          "image":"mySQL"
-        }
-      ]
-    }
-    `), &v); err != nil {
-		t.Error(err)
-	}
-
-	// target := "kind"
-	target := "containers.volumes.path"
-
-	is, err := FieldFromUnmarshaled(v, target)
-	if err != nil {
-		panic(err)
-	}
-	for _, i := range is {
-		t.Logf("target: %s, type: %s, value: %s", target, reflect.ValueOf(i).Kind(), i)
-	}
-}
-
 func FieldFromUnmarshaled(input interface{}, target string) ([]interface{}, error) {
-	// fmt.Printf("FFU: Called\n\ttarget:%s\n\tinput:\n%s\n", target, input)
+	fmt.Printf("FFU: Called\n\ttarget:%s\n\tinput:\n%s\n", target, input)
 	if target == "" || len(target) < 1 {
+		if reflect.ValueOf(input).Kind() == reflect.Slice {
+			return input.([]interface{}), nil
+		}
 		return []interface{}{input}, nil
+
 	}
 
 	// 입력을 reflect
 	rM := reflect.ValueOf(input)
 
-	// fmt.Printf("FFU: Type of input: %s\n", rM.Kind())
+	fmt.Printf("FFU: Type of input: %s\n", rM.Kind())
 
 	// 현재 찾아야 할 키와 나중에 찾을 키를 구분
 	var (
@@ -73,6 +31,7 @@ func FieldFromUnmarshaled(input interface{}, target string) ([]interface{}, erro
 		// 입력이 Map 일 경우
 
 		i := rM.MapRange()
+		fmt.Printf("\tMap keys: %s\n", rM.MapKeys())
 		tmps := []interface{}{}
 		for i.Next() {
 			if i.Key().String() == currentTarget {
@@ -88,15 +47,16 @@ func FieldFromUnmarshaled(input interface{}, target string) ([]interface{}, erro
 		return tmps, nil
 	case reflect.Slice:
 		// 입력이 slice인 경우
-		res := []interface{}{}
+		// rM.Index()
+		tmp := []interface{}{}
 		for i := 0; i < rM.Len(); i++ {
-			is, err := FieldFromUnmarshaled(input.([]interface{})[i], target)
+			res, err := FieldFromUnmarshaled(input.([]interface{})[i], target)
 			if err != nil {
 				return nil, err
 			}
-			res = append(res, is...)
+			tmp = append(tmp, res...)
 		}
-		return res, nil
+		return tmp, nil
 	default:
 		// 더이상 하위 구조가 없는 경우
 		// 더 찾아야 하는 키가 있는 경우 에러
@@ -106,4 +66,6 @@ func FieldFromUnmarshaled(input interface{}, target string) ([]interface{}, erro
 			return []interface{}{input}, nil
 		}
 	}
+	// 비정상 분기
+	return nil, errors.New("unexpected case")
 }
