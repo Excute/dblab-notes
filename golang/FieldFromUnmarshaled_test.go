@@ -106,3 +106,4 @@ func FieldFromUnmarshaled(input interface{}, target string) ([]interface{}, erro
 			return []interface{}{input}, nil
 		}
 	}
+}
