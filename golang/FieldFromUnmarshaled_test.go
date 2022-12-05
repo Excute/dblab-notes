@@ -1,5 +1,13 @@
+package test
+
+import (
+	"encoding/json"
+	"errors"
+	"reflect"
+	"strings"
+)
+
 func FieldFromUnmarshaled(input interface{}, target string) ([]interface{}, error) {
-	fmt.Printf("FFU: Called\n\ttarget:%s\n\tinput:\n%s\n", target, input)
 	if target == "" || len(target) < 1 {
 		if reflect.ValueOf(input).Kind() == reflect.Slice {
 			return input.([]interface{}), nil
@@ -10,8 +18,6 @@ func FieldFromUnmarshaled(input interface{}, target string) ([]interface{}, erro
 
 	// 입력을 reflect
 	rM := reflect.ValueOf(input)
-
-	fmt.Printf("FFU: Type of input: %s\n", rM.Kind())
 
 	// 현재 찾아야 할 키와 나중에 찾을 키를 구분
 	var (
@@ -31,7 +37,7 @@ func FieldFromUnmarshaled(input interface{}, target string) ([]interface{}, erro
 		// 입력이 Map 일 경우
 
 		i := rM.MapRange()
-		fmt.Printf("\tMap keys: %s\n", rM.MapKeys())
+		// fmt.Printf("\tMap keys: %s\n", rM.MapKeys())
 		tmps := []interface{}{}
 		for i.Next() {
 			if i.Key().String() == currentTarget {
@@ -67,5 +73,92 @@ func FieldFromUnmarshaled(input interface{}, target string) ([]interface{}, erro
 		}
 	}
 	// 비정상 분기
-	return nil, errors.New("unexpected case")
+	// return nil, errors.New("unexpected case")
+}
+
+func main() {
+
+	mStr := `
+	{
+		"apiVersion": "v1",
+		"kind": "Pod",
+		"metadata": {
+			"name": "wordpress-mysql-12345678",
+			"namespace": "my-namespace",
+			"resourceVersion": "221124",
+			"uid": "a05",
+			"labels": {
+				"app": "wordpress",
+				"tier": "mysql"
+			},
+			"finalizers": [
+				"my-finalizer"
+			],
+			"spec": {
+				"containers": [
+					{
+						"image": "myregi:5000/mysql:5.6",
+						"name": "mysql",
+						"resources": {
+							"limits": {
+								"memory": "1Gi",
+								"cpu": "500m"
+							}
+						},
+						"env": [
+							{
+								"name": "MYSQL_ROOT_PASSWORD",
+								"valueFrom": {
+									"secretKeyRef": {
+										"name": "mysql-pass",
+										"key": "password"
+									}
+								}
+							}
+						],
+						"ports": [
+							{
+								"containerPort": 3306,
+								"name": "mysql"
+							}
+						],
+						"volumeMounts": [
+							{
+								"name": "mysql-persistent-storage",
+								"mountPath": "/var/lib/mysql"
+							}
+						]
+					}
+				],
+				"volumes": [
+					{
+						"name": "mysql-persistent-storage",
+						"persistentVolumeClaim": {
+							"claimName": "pvc-wordpress-mysql"
+						}
+					}
+				],
+				"schedulerName": "my-scheduler",
+				"runtimeClassName": "my-runtime-class",
+				"priorityClassName": "high-priority",
+				"serviceAccountName": "my-svc-account",
+				"readinessGates": [
+					{
+						"conditionType": "my-readi-1"
+					},
+					{
+						"conditionType": "my-readi-2"
+					}
+				]
+			}
+		}
+	}
+	`
+
+	var result interface{}
+
+	if err := json.Unmarshal([]byte(mStr), &result); err != nil {
+		panic(err)
+	}
+
 }
